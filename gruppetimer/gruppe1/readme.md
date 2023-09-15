@@ -15,3 +15,4 @@ Dersom du har ønsker, innspill eller feedback har jeg et anonymt Nettskjema som
 ## Ukevis opplegg
 
 1. [Introduksjon: indekser og postinglister](./uke1_intro)
+1. [Strenger 1: tries og suffix arrays](./uke2_string_intro)
