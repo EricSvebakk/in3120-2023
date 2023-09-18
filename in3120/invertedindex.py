@@ -101,9 +101,6 @@ class InMemoryInvertedIndex(InvertedIndex):
                         self.__posting_lists.append(InMemoryPostingList())
                     
                     self.__posting_lists[id].append_posting(Posting(i, x.get(t)))
-                    
-        # print("pl", list(map(lambda x: x, self.__posting_lists)))
-        # print()
 
 
     # done

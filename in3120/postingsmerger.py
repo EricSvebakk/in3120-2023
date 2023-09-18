@@ -73,6 +73,6 @@ class PostingsMerger:
                 ids.add(p.document_id)
                 result.append(p)
         
-        return result
+        return sorted(result, key=lambda x: x.document_id)
         
         # raise NotImplementedError("You need to implement this as part of the assignment.")
