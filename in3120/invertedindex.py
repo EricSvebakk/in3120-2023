@@ -84,7 +84,7 @@ class InMemoryInvertedIndex(InvertedIndex):
 
     def __build_index(self, fields: Iterable[str], compressed: bool) -> None:
         
-        for c in self.__corpus:
+        for i, c in enumerate(self.__corpus):
         
             for f in fields:
         
@@ -94,28 +94,16 @@ class InMemoryInvertedIndex(InvertedIndex):
                 
                 x = Counter(terms)
                 
-                print("xc", list(x.elements()))
-                
-                for t in terms:
+                for t in set(terms):
                     id = self.__dictionary.add_if_absent(t)
                     
                     if (len(self.__posting_lists) == id):
                         self.__posting_lists.append(InMemoryPostingList())
                     
-                    p = Posting(id, x.get(t))
+                    self.__posting_lists[id].append_posting(Posting(i, x.get(t)))
                     
-                    x1 = len(self.__posting_lists) == 0
-                    x2 = p
-                    x3 = self.__posting_lists[len(self.__posting_lists)-1].get_iterator()
-                    x4 = list(x3)
-                    # x2 = self.__posting_lists[id].get_iterator()
-                    
-                    print("x", x1, x2, x4)
-                    
-                    self.__posting_lists[id].append_posting(p)
-                    
-        print("pl", list(map(lambda x: x, self.__posting_lists)))
-        print()
+        # print("pl", list(map(lambda x: x, self.__posting_lists)))
+        # print()
 
 
     # done
@@ -131,7 +119,7 @@ class InMemoryInvertedIndex(InvertedIndex):
     def get_postings_iterator(self, term: str) -> Iterator[Posting]:
         
         if (id := self.__dictionary.get_term_id(term)):
-            print("yes.", term)
+            # print("yes.", term)
             return iter(self.__posting_lists[id])
         
         return []
@@ -140,5 +128,11 @@ class InMemoryInvertedIndex(InvertedIndex):
 
     # 
     def get_document_frequency(self, term: str) -> int:
-        pass
+        
+        id = self.__dictionary.get_term_id(term)
+        
+        if (id):
+            return len(self.__posting_lists[id])
+        
+        return 0
         # raise NotImplementedError("You need to implement this as part of the assignment.")
