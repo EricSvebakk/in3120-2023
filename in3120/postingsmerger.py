@@ -18,28 +18,6 @@ class PostingsMerger:
 
     @staticmethod
     def intersection(p1: Iterator[Posting], p2: Iterator[Posting]) -> Iterator[Posting]:
-        
-        result = []
-        
-        val1, val2 = next(p1, None), next(p2, None)
-        
-        while (val1 != None and val2 != None):
-            
-            if (val1.document_id == val2.document_id):
-                
-                result.append(val1)
-                
-                val1, val2 = next(p1, None), next(p2, None)
-                
-            elif (val1.document_id < val2.document_id):
-                val1 = next(p1, None)
-            
-            else:
-                val2 = next(p2, None)
-        
-        return result
-            
-        
         """
         A generator that yields a simple AND of two posting lists, given
         iterators over these.
@@ -48,7 +26,20 @@ class PostingsMerger:
         to the document identifiers.
         """
         
-        # raise NotImplementedError("You need to implement this as part of the assignment.")
+        val1, val2 = next(p1, None), next(p2, None)
+        
+        while (val1 != None and val2 != None):
+            
+            if (val1.document_id == val2.document_id):
+                yield val1
+                val1, val2 = next(p1, None), next(p2, None)
+                
+            elif (val1.document_id < val2.document_id):
+                val1 = next(p1, None)
+            
+            else:
+                val2 = next(p2, None)
+        
 
     @staticmethod
     def union(p1: Iterator[Posting], p2: Iterator[Posting]) -> Iterator[Posting]:
@@ -59,20 +50,28 @@ class PostingsMerger:
         The posting lists are assumed sorted in increasing order according
         to the document identifiers.
         """
+    
+        val1, val2 = next(p1, None), next(p2, None)
         
-        ids = set()
-        result = []
-        
-        for p in p1:
-            if (not p.document_id in ids):
-                ids.add(p.document_id)
-                result.append(p)
+        while (val1 and val2):
             
-        for p in p2:
-            if (not p.document_id in ids):
-                ids.add(p.document_id)
-                result.append(p)
+            if (val1.document_id == val2.document_id):
+                val1 = next(p1, None)
+            
+            elif (val1.document_id < val2.document_id):
+                yield val1
+                val1 = next(p1, None)
+                
+            else:
+                yield val2
+                val2 = next(p2, None)
+            
+        while (val1):
+            yield val1
+            val1 = next(p1, None)
         
-        return sorted(result, key=lambda x: x.document_id)
+        while (val2):
+            yield val2
+            val2 = next(p2, None)
         
-        # raise NotImplementedError("You need to implement this as part of the assignment.")
+        

@@ -83,24 +83,22 @@ class InMemoryInvertedIndex(InvertedIndex):
         return str({term: list(self.__posting_lists[term_id]) for (term, term_id) in self.__dictionary})
 
     def __build_index(self, fields: Iterable[str], compressed: bool) -> None:
-        
-        for i, c in enumerate(self.__corpus):
-        
-            for f in fields:
-        
-                phrase = c.get_field(f, None)
-                
-                terms = list(self.get_terms(phrase))
-                
-                x = Counter(terms)
-                
-                for t in set(terms):
-                    id = self.__dictionary.add_if_absent(t)
-                    
-                    if (len(self.__posting_lists) == id):
-                        self.__posting_lists.append(InMemoryPostingList())
-                    
-                    self.__posting_lists[id].append_posting(Posting(i, x.get(t)))
+      
+      for i, c in enumerate(self.__corpus):
+          assert i == c.document_id, "document_id is not equal to i"
+
+          terms = []
+          for f in fields:
+            terms.extend(self.get_terms(c.get_field(f, None)))
+
+          for k, v in Counter(terms).items():
+              
+              term_id = self.__dictionary.add_if_absent(k)
+
+              if len(self.__posting_lists) == term_id:
+                  self.__posting_lists.append(compressed and CompressedInMemoryPostingList() or InMemoryPostingList())
+
+              self.__posting_lists[term_id].append_posting(Posting(i, v))
 
 
     # done
