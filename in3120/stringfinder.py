@@ -25,6 +25,7 @@ class StringFinder:
         self.__tokenizer = tokenizer
 
     def scan(self, buffer: str) -> Iterator[Dict[str, Any]]:
+        
         """
         Scans the given buffer and finds all dictionary entries in the trie that are also present in the
         buffer. We only consider matches that begin and end on token boundaries.
@@ -36,4 +37,26 @@ class StringFinder:
         support for leftmost-longest matching (instead of reporting all matches), and support for lemmatization
         or similar linguistic variations.
         """
-        raise NotImplementedError("You need to implement this as part of the assignment.")
+        
+        current_position = 0
+        tokenized_buffer = list(self.__tokenizer.tokens(buffer))
+
+        while current_position < len(tokenized_buffer):
+            current_node = self.__trie
+            start_position = current_position
+
+            while current_position < len(tokenized_buffer):
+                token, (begin, end) = tokenized_buffer[current_position]
+                current_node = current_node.consume(token)
+
+                if current_node is None:
+                    break
+
+                if current_node.is_final():
+                    matched_phrase = self.__tokenizer.join(tokenized_buffer[start_position:current_position + 1])
+                    yield {"match": matched_phrase, "range": (start_position, current_position)}
+                
+                current_position += 1
+
+            current_position = start_position + 1
+        

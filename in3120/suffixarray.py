@@ -29,14 +29,37 @@ class SuffixArray:
         Builds a simple suffix array from the set of named fields in the document collection.
         The suffix array allows us to search across all named fields in one go.
         """
-        raise NotImplementedError("You need to implement this as part of the assignment.")
+        
+        for doc_id, doc in enumerate(self.__corpus):
+            assert doc_id == doc.document_id, "document_id is not equal to i"
+            
+            for field in fields:
+                
+                terms = self.__tokenizer.strings(self.__normalize(doc.get_field(field, None)))
+                
+                # add suffixes
+                for t in terms:
+                    self.__haystack.extend([ (doc_id, t[i:]) for i in range(len(t)) ])
+                
+        # sort suffixes
+        self.__haystack.sort(key = lambda x : x[1])
+        
+        # iterate over suffixes
+        for doc_id, suffix in self.__haystack:
+            words_in_suffix = suffix.split()
+            
+            # add offsets to self.__suffixes
+            for i in range(len(words_in_suffix)):
+                self.__suffixes.append((doc_id, i))
+                
 
     def __normalize(self, buffer: str) -> str:
         """
         Produces a normalized version of the given string. Both queries and documents need to be
         identically processed for lookups to succeed.
         """
-        raise NotImplementedError("You need to implement this as part of the assignment.")
+        
+        return self.__normalizer.canonicalize(buffer)
 
     def __binary_search(self, needle: str) -> int:
         """
@@ -48,7 +71,22 @@ class SuffixArray:
         prior to Python 3.10 due to how we represent the suffixes via (index, offset) tuples. Version 3.10
         added support for specifying a key.
         """
-        raise NotImplementedError("You need to implement this as part of the assignment.")
+        
+        low, high = 0, len(self.__suffixes) - 1
+        
+        while low <= high:
+            mid = (low + high) // 2
+            
+            suffix = self.__haystack[mid][1]
+            
+            if suffix == needle:
+                return mid
+            elif suffix < needle:
+                low = mid + 1
+            else:
+                high = mid - 1
+        
+        return low
 
     def evaluate(self, query: str, options: dict) -> Iterator[Dict[str, Any]]:
         """
@@ -66,4 +104,29 @@ class SuffixArray:
         The results yielded back to the client are dictionaries having the keys "score" (int) and
         "document" (Document).
         """
-        raise NotImplementedError("You need to implement this as part of the assignment.")
+        
+        # wilcard at end of query (mon*):
+        # * follow b-tree for symbols (m,o,n)
+        # * enumerate set W of terms with prefix mon
+        # * use |W| lookups on SII to retrieve docs containing any term in W
+        
+        query = self.__normalize(query)
+        start_pos = self.__binary_search(query)
+
+        match_count = {}
+        
+        # Collect matching documents and count matches
+        for i in range(start_pos, len(self.__suffixes)):
+        
+            if self.__haystack[i][1].startswith(query):
+                
+                doc_id = self.__haystack[i][0]
+                match_count[doc_id] = match_count.get(doc_id, 0) + 1
+        
+        # Sort matches and 
+        sorted_matches = sorted(match_count.items(), key=lambda x: x[1], reverse=True)
+        hit_count = options.get("hit_count", None)
+        
+        # iterate and yield matching documents by match count
+        for doc_id, score in sorted_matches[:hit_count]:
+            yield {"score": score, "document": self.__corpus.get_document(doc_id)}
