@@ -133,13 +133,13 @@ class SuffixArray:
         
                 sieve.sift(matches[hi]["score"], hi)
         
-        # map doc_id to actual document
-        results = list(map(
-            lambda x: {"score":x[0], "document":self.__corpus[x[1]]},
-            sieve.winners()
-        ))
         
-        if (options.get("hit_count", None)):
-            return results[:options["hit_count"]]
-        return results
+        winners = sieve.winners()
+        
+        # TODO: LIMIT ITERATOR TO HIT_COUNT
+        # counter = options.get("hit_count", len(list(winners)))
+        # winners = iter(winners[:counter])
+        
+        for w in winners:
+            yield {"score":w[0], "document":self.__corpus[w[1]]}
         

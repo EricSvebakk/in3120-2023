@@ -52,6 +52,8 @@ class StringFinder:
                 
                 # reset live states
                 if current_node is None:
+                    
+                    # TODO: update live-state so that relevant nodes remain
                     states = []
                     break
                 
