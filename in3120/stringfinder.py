@@ -38,6 +38,13 @@ class StringFinder:
         or similar linguistic variations.
         """
         
+        # for t in self.__tokenizer.tokens(buffer):
+            
+            
+            
+        #     pass
+        
+        
         current_position = 0
         tokenized_buffer = list(self.__tokenizer.tokens(buffer))
 
