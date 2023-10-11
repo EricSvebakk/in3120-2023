@@ -37,33 +37,77 @@ class StringFinder:
         support for leftmost-longest matching (instead of reporting all matches), and support for lemmatization
         or similar linguistic variations.
         """
-        
-        # for t in self.__tokenizer.tokens(buffer):
-            
-            
-            
-        #     pass
-        
-        
-        current_position = 0
-        tokenized_buffer = list(self.__tokenizer.tokens(buffer))
 
-        while current_position < len(tokenized_buffer):
+        states = []
+        # matches = []
+
+        # iterate buffer
+        for token, (start, end) in self.__tokenizer.tokens(buffer):
             current_node = self.__trie
-            start_position = current_position
-
-            while current_position < len(tokenized_buffer):
-                token, (begin, end) = tokenized_buffer[current_position]
-                current_node = current_node.consume(token)
-
-                if current_node is None:
-                    break
-
-                if current_node.is_final():
-                    matched_phrase = self.__tokenizer.join(tokenized_buffer[start_position:current_position + 1])
-                    yield {"match": matched_phrase, "range": (start_position, current_position)}
+            
+            # get pos in token
+            for current_pos in range(start, end):
                 
-                current_position += 1
+                current_node = current_node.consume(buffer[current_pos])
+                
+                states.append((current_node, current_pos))
+                
+                # reset live states
+                if current_node is None:
+                    # print("break!", current_pos, end, f"'{buffer[current_pos]}'")
+                    # print("change", states)
+                    
+                    # states = [ x for x in states if (x[0] and x[0].is_final()) ]
+                    states = []
+                    
+                    break
+                
+                # add matches from states
+                if current_node.is_final():
 
-            current_position = start_position + 1
+                    # print("final!", current_pos, end)
+                    
+                    first_state = states[0]
+                    match = " ".join(buffer[first_state[1]:end].split())
+                    
+                    result = {
+                        "match": match,
+                        "range": (states[0][1], end)
+                    }
+                    
+                    yield result
+                    # matches.append(result)
+            
+            # print("matches:", list(map(lambda x: x["match"], matches)))
+        
+        
+            
+
+        # # loop over buffer
+        # while current_position < len_buffer:
+            
+        #     current_node = self.__trie
+        #     start_position = current_position
+            
+            
+
+        #     # 
+        #     while current_position < len_buffer:
+                
+        #         # 
+        #         token, (start, end) = tokenized_buffer[current_position]
+        #         current_node = current_node.consume(token)
+
+        #         # 
+        #         if current_node is None:
+        #             break
+
+        #         # 
+        #         if current_node.is_final():
+        #             matched_phrase = self.__tokenizer.join(tokenized_buffer[start_position:current_position + 1])
+        #             yield {"match": matched_phrase, "range": (start_position, current_position)}
+                
+        #         current_position += 1
+
+        #     current_position = start_position + 1
         

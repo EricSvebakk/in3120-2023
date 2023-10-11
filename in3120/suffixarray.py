@@ -31,23 +31,28 @@ class SuffixArray:
         The suffix array allows us to search across all named fields in one go.
         """
         
-        # creates haystack
-        for doc_id, doc in enumerate(self.__corpus):
-            assert doc_id == doc.document_id, "document_id is not equal to i"
-            
-            content = "".join([ self.__normalize(doc.get_field(field, None)) for field in fields ])
-            
-            self.__haystack.append((doc_id, content))
+        self.__haystack = [ (doc.document_id, self.__normalize("".join([ doc.get_field(field, None) for field in fields ]))) for doc in self.__corpus ]
+        self.__suffixes = [ (h_id, t_start+i) for h_id, searchable_content in self.__haystack for tok, (t_start, _) in self.__tokenizer.tokens(searchable_content) for i in range(len(tok))]
         
-        # creates suffixes
-        for h_id, searchable_content in self.__haystack:
-            for tok, (t_start, _) in self.__tokenizer.tokens(searchable_content):
-                
-                self.__suffixes.extend([ (h_id, t_start+i, tok[i:]) for i in range(len(tok)) ])
-
+        # ADD HAYSTACKS
+        # for doc in self.__corpus:
+        #     con = "".join([ doc.get_field(field, None) for field in fields ])
+        #     res = (doc.document_id, self.__normalize(con))
+        #     self.__haystack.append(res)
+        
+        # ADD SUFFIXES
+        # for h_id, searchable_content in self.__haystack:
+        #     for t_start, t_end in self.__tokenizer.ranges(searchable_content):
+        #         for i in range(t_start, t_end):
+        #             self.__suffixes.append((h_id, i))
+        
         # sorts suffixes
-        self.__suffixes.sort(key = lambda x : x[2])
+        self.__suffixes.sort(key = lambda x : self.__find_token(x[0], x[1]))
         
+    def __find_token(self, doc_id: int, offset: int, end = None) -> str:
+        if (end):
+            return self.__haystack[doc_id][1][offset:end]
+        return self.__haystack[doc_id][1][offset:]
 
     def __normalize(self, buffer: str) -> str:
         """
@@ -74,7 +79,7 @@ class SuffixArray:
             mid = (low + high) // 2
             
             suffix = self.__suffixes[mid]
-            tok = self.__haystack[suffix[0]][1][suffix[1]:]
+            tok = self.__find_token(suffix[0], suffix[1])
             
             if tok == needle:
                 return mid
@@ -110,9 +115,9 @@ class SuffixArray:
         
         # Collect matching documents and count matches
         for i in range(start_pos, len(self.__suffixes)):
-            hi, so, tok = self.__suffixes[i]
+            hi, so = self.__suffixes[i]
             
-            to_be_checked = self.__haystack[hi][1][so:(so+len(query))]
+            to_be_checked = self.__find_token(hi, so, so+len(query))
             
             # if start of suffix == query
             if to_be_checked == query:
