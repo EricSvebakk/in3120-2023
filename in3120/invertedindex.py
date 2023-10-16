@@ -105,6 +105,7 @@ class InMemoryInvertedIndex(InvertedIndex):
     def get_terms(self, buffer: str) -> Iterator[str]:
         
         n = self.__normalizer.normalize(buffer)
+        n = self.__normalizer.canonicalize(n)
         t = self.__tokenizer.strings(n)
         i = iter(t)
 
@@ -113,9 +114,13 @@ class InMemoryInvertedIndex(InvertedIndex):
     #  
     def get_postings_iterator(self, term: str) -> Iterator[Posting]:
         
-        if (id := self.__dictionary.get_term_id(term)):
+        # print(self.__dictionary.get_term_id(term))
+        # print("term:", term, end="")
+        
+        if (id := self.__dictionary.get_term_id(term) != None):
             # print("yes.", term)
             return iter(self.__posting_lists[id])
+        # print()
         
         return []
     
@@ -126,7 +131,7 @@ class InMemoryInvertedIndex(InvertedIndex):
         
         id = self.__dictionary.get_term_id(term)
         
-        if (id):
+        if (id != None):
             return len(self.__posting_lists[id])
         
         return 0

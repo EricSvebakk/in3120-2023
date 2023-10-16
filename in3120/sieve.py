@@ -33,13 +33,17 @@ class Sieve:
         """
         Sifts a scored item through the sieve.
         """
+        # add (score, item) to heap
         if len(self.__heap) < self.__size:
             heapq.heappush(self.__heap, (score, item))
+            
+        # replace worst element with (score, item)
         else:
             root_score = self.__heap[0][0]
             if root_score < score:
                 heapq.heapreplace(self.__heap, (score, item))
 
+    # returns (score, item) in descending order
     def winners(self) -> Iterator[Tuple[Number, Any]]:
         """
         Returns the highest-scoring items that have been sifted through the sieve, sorted

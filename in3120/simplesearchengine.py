@@ -44,4 +44,86 @@ class SimpleSearchEngine:
         N is inferred from the query via the "match_threshold" (float) option, and the maximum number of documents
         to return to the client is controlled via the "hit_count" (int) option.
         """
-        raise NotImplementedError("You need to implement this as part of the assignment.")
+        
+        
+        # all terms in query
+        query_terms = self.__inverted_index.get_terms(query)
+        
+        unique_query_terms = list(Counter(query_terms).items())
+        
+        m = len(unique_query_terms)
+        
+        # calculate n from m and t
+        n = max(1, min(m, int(options["match_threshold"] * m)))
+        
+        # posting => (doc_id, term_frequency)
+        
+        posting_lists = [self.__inverted_index.get_postings_iterator(a) for (a,b) in unique_query_terms ]  
+        
+        # move pointers in posting_lists
+        all_cursors = [next(p, None) for p in posting_lists]
+        
+        # all cursors that remain (not None)
+        active_cursors = [cursor for cursor in all_cursors if cursor != None]
+        
+        # when all valid docs are found: score, rank, yield
+        sieve = Sieve(options["hit_count"])
+        
+        
+        
+        # remaining_cursor_ids >= n
+        while len(active_cursors) >= n:
+            
+            # determine lowest frontier
+            doc_id = min([ x.document_id for x in active_cursors ])
+            frontier = [ p for p in active_cursors if p.document_id == doc_id ]
+            
+            if (len(frontier) >= n):
+            
+                # rank each document
+                # for c in active_cursors:
+                ranker.reset(doc_id)
+                
+                # rank document using ranker
+                for (terms, multiplicity), p in zip(unique_query_terms, all_cursors):
+                    
+                    if (p and p.document_id == doc_id):
+                        
+                        ranker.update(terms, multiplicity, p)
+                
+                sieve.sift(ranker.evaluate(), doc_id)
+                
+                
+            for i, (posting, posting_list) in enumerate(zip(all_cursors, posting_lists)):
+                
+                if (posting and posting.document_id == doc_id):
+                    
+                    all_cursors[i] = next(posting_list, None)
+                
+                active_cursors = [ p for p in all_cursors if p ]
+                
+            #==INVARIANT==# active_cursors only contains N-of-M matched postings
+            
+            # move lowest frontier (cursor with the lowest index)
+            # move all frontiers that points to the same document as the lowest frontier
+            # for i, pl in enumerate(posting_lists):
+                
+            #     if (pl != None and all_cursors[i].document_id == doc_id):
+            #         posting_lists[i] = next(pl, None)
+            #     # else:
+            #     #     pl
+                
+            # all_cursors = [ (next(pl, None) if (pl != None and pl.document_id == doc_id) else pl) for pl in posting_lists ]
+            
+            # all cursors that remain (not None)
+            # active_cursors_ids = [cursor for cursor in all_cursors if cursor != None]
+        
+        
+        
+        
+        for w in sieve.winners():
+            yield {"score": w[0], "document": self.__corpus[w[1]]}
+        
+        
+        
+        
