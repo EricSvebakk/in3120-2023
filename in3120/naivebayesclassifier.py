@@ -7,6 +7,7 @@ from .normalizer import Normalizer
 from .tokenizer import Tokenizer
 from .corpus import Corpus
 
+from collections import Counter
 
 class NaiveBayesClassifier:
     """
@@ -40,31 +41,82 @@ class NaiveBayesClassifier:
         self.__compute_vocabulary(training_set, fields)
         self.__compute_posteriors(training_set, fields)
 
-    def __compute_priors(self, training_set):
+
+    # The probability of seeing a class regardless of the term
+    def __compute_priors(self, training_set: Dict[str, Corpus]):
         """
         Estimates all prior probabilities needed for the naive Bayes classifier.
         """
-        raise NotImplementedError("You need to implement this as part of the assignment.")
-
-    def __compute_vocabulary(self, training_set, fields):
+        
+        # 
+        # category_size = [(key, len(corpus)) for key, corpus in training_set.items()]
+        # total_size = sum(map(lambda x: x[1], category_size))
+        
+        # 
+        # category_size2 = [(key, corpus.size()) for key, corpus in training_set.items()]
+        # total_siz2 = sum(map(lambda x: x[1], category_size2))
+        
+        # 
+        for key, corpus in training_set.items():
+            
+            # print("key", key)
+            
+            self.__denominators[key] = corpus.size()
+        
+        
+    # 
+    def __compute_vocabulary(self, training_set: Dict[str, Corpus], fields: Iterable[str]):
         """
         Builds up the overall vocabulary as seen in the training set.
         """
-        raise NotImplementedError("You need to implement this as part of the assignment.")
+        
+        for corpus in training_set.values():
+            for doc in corpus:
+                for field in fields:
+                    for x in self.__get_terms(doc.get_field(field, None)):
+                        
+                        self.__vocabulary.add_if_absent(x)
+                    
+        # print(self.__vocabulary)
 
+
+    # 
     def __compute_posteriors(self, training_set, fields):
         """
         Estimates all conditional probabilities needed for the naive Bayes classifier.
         """
-        raise NotImplementedError("You need to implement this as part of the assignment.")
+        
+        # vocab_size = self.__vocabulary.size()
+        
+        for key, corpus in training_set.items():
+            for doc in corpus:
+                for field in fields:
 
-    def __get_terms(self, buffer):
+                    terms = self.__get_terms(doc.get_field(field, None))
+                    
+                    c = Counter(terms)
+                    
+                    # self.__denominators[key] = len(terms) + vocab_size
+                    self.__conditionals[key] = dict()
+                    
+                    for term in terms:
+                    
+                        result = (c[term] + 1) / self.__denominators[key]
+                        self.__conditionals[key][term] = result
+        
+        # print(self.__conditionals)
+
+
+    # 
+    def __get_terms(self, buffer) -> list[str]:
         """
         Processes the given text buffer and returns the sequence of normalized
         terms as they appear. Both the documents in the training set and the buffers
         we classify need to be identically processed.
         """
-        raise NotImplementedError("You need to implement this as part of the assignment.")
+        
+        return [ x for x in self.__tokenizer.strings(self.__normalizer.canonicalize(buffer))]
+     
 
     def classify(self, buffer: str) -> Iterator[Dict[str, Any]]:
         """
@@ -75,4 +127,22 @@ class NaiveBayesClassifier:
         The results yielded back to the client are dictionaries having the keys "score" (float) and
         "category" (str).
         """
-        raise NotImplementedError("You need to implement this as part of the assignment.")
+        
+        # use terms somehow
+        terms = self.__get_terms(buffer)
+        scores = self.__priors.copy()
+        
+        for cat_name in self.__priors.keys():
+            for cat in self.__conditionals.values():
+                
+                for cat_term_value in cat.values():
+            
+                    scores[cat_name] += cat_term_value
+                
+                yield {"score": scores[cat_name], "category": cat_name}
+        
+        # print(scores)
+        
+        # return scores
+        
+        # raise NotImplementedError("You need to implement this as part of the assignment.")
