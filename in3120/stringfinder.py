@@ -60,6 +60,7 @@ class StringFinder:
                 # add matches from states
                 if current_node.is_final():
                     
+                    
                     first_state = states[0]
                     match = " ".join(buffer[first_state[1]:end].split())
                     

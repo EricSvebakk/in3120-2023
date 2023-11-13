@@ -25,4 +25,16 @@ class ShingleGenerator(Tokenizer):
         """
         Locates where the shingles begin and end.
         """
-        raise NotImplementedError("You need to implement this as part of the assignment.")
+ 
+        start = 0
+        end = self.__width     
+        
+        while end <= (len(buffer)):
+            s = start if start > 0 else 0
+            e = end if end <= len(buffer) else len(buffer)
+            start += 1
+            end += 1
+            yield (s, e)
+            
+        if (start != len(buffer) and start == 0):
+            yield (start, len(buffer))
