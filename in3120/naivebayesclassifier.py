@@ -6,6 +6,7 @@ from .dictionary import InMemoryDictionary
 from .normalizer import Normalizer
 from .tokenizer import Tokenizer
 from .corpus import Corpus
+import math
 
 from collections import Counter
 
@@ -36,6 +37,7 @@ class NaiveBayesClassifier:
         # Maps a category c to the denominator used when doing Laplace smoothing.
         self.__denominators: Dict[str, int] = {}
 
+        print()
         # Train the classifier, i.e., estimate all probabilities.
         self.__compute_priors(training_set)
         self.__compute_vocabulary(training_set, fields)
@@ -48,20 +50,15 @@ class NaiveBayesClassifier:
         Estimates all prior probabilities needed for the naive Bayes classifier.
         """
         
-        # 
-        # category_size = [(key, len(corpus)) for key, corpus in training_set.items()]
-        # total_size = sum(map(lambda x: x[1], category_size))
+        total_docs = sum([corpus.size() for corpus in training_set.values()])
         
-        # 
-        # category_size2 = [(key, corpus.size()) for key, corpus in training_set.items()]
-        # total_siz2 = sum(map(lambda x: x[1], category_size2))
-        
+        print("\ncompute_priors:")
         # 
         for key, corpus in training_set.items():
             
-            # print("key", key)
+            self.__priors[key] = corpus.size() / total_docs
             
-            self.__denominators[key] = corpus.size()
+            print(key, self.__priors[key])
         
         
     # 
@@ -76,35 +73,33 @@ class NaiveBayesClassifier:
                     for x in self.__get_terms(doc.get_field(field, None)):
                         
                         self.__vocabulary.add_if_absent(x)
-                    
-        # print(self.__vocabulary)
-
 
     # 
     def __compute_posteriors(self, training_set, fields):
         """
         Estimates all conditional probabilities needed for the naive Bayes classifier.
         """
-        
-        # vocab_size = self.__vocabulary.size()
-        
-        for key, corpus in training_set.items():
+        print("\ncompute_posterior:")
+                
+        for cat_name, corpus in training_set.items():
+            terms = []
+            
+            # compute terms
             for doc in corpus:
                 for field in fields:
+                    terms.extend(self.__get_terms(doc.get_field(field, None)))
+            
+            self.__denominators[cat_name] = len(terms) + self.__vocabulary.size()
+            
+            # 
+            self.__conditionals[cat_name] = dict()
+            
+            c = Counter(terms)
+            
+            for term in terms:
 
-                    terms = self.__get_terms(doc.get_field(field, None))
-                    
-                    c = Counter(terms)
-                    
-                    # self.__denominators[key] = len(terms) + vocab_size
-                    self.__conditionals[key] = dict()
-                    
-                    for term in terms:
-                    
-                        result = (c[term] + 1) / self.__denominators[key]
-                        self.__conditionals[key][term] = result
-        
-        # print(self.__conditionals)
+                self.__conditionals[cat_name][term] = (c.get(term, 0) + 1) / self.__denominators[cat_name]
+                print(self.__conditionals[cat_name][term], c.get(term, 0), self.__denominators[cat_name], term)
 
 
     # 
@@ -115,7 +110,10 @@ class NaiveBayesClassifier:
         we classify need to be identically processed.
         """
         
-        return [ x for x in self.__tokenizer.strings(self.__normalizer.canonicalize(buffer))]
+        tokens = self.__tokenizer.strings(self.__normalizer.canonicalize(buffer))
+        return list(self.__normalizer.normalize(t) for t in tokens)
+        
+        # return [ x for x in self.__tokenizer.strings(self.__normalizer.canonicalize(buffer))]
      
 
     def classify(self, buffer: str) -> Iterator[Dict[str, Any]]:
@@ -128,21 +126,31 @@ class NaiveBayesClassifier:
         "category" (str).
         """
         
-        # use terms somehow
-        terms = self.__get_terms(buffer)
-        scores = self.__priors.copy()
+        print("\nclassify:")
+        
+        # remove terms that are not in vocab
+        terms = [term for term in self.__get_terms(buffer) if term in self.__vocabulary] 
+        scores =  self.__priors.copy()
+        
+        print(scores)
         
         for cat_name in self.__priors.keys():
-            for cat in self.__conditionals.values():
-                
-                for cat_term_value in cat.values():
             
-                    scores[cat_name] += cat_term_value
+            scores[cat_name] = math.log(scores[cat_name])
+            default_val = 1 / self.__denominators[cat_name]
+            
+            for term in terms:
                 
-                yield {"score": scores[cat_name], "category": cat_name}
+                scores[cat_name] += math.log(self.__conditionals[cat_name].get(term, default_val))
+                
+                print(term, self.__conditionals[cat_name].get(term, default_val), default_val)
+                # if self.__conditionals[cat_name].get(term, None):
+                #     scores[cat_name] += math.log(self.__conditionals[cat_name].get(term))
+                # else:
+                #     scores[cat_name] += default_val
+                
+                
+        sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
         
-        # print(scores)
-        
-        # return scores
-        
-        # raise NotImplementedError("You need to implement this as part of the assignment.")
+        for key, val in sorted_scores:
+            yield {"score": val, "category": key}
